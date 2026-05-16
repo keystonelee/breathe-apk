@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0D47A1">
+<title>闭气训练</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231565C0'/><text x='50' y='65' text-anchor='middle' font-size='50' fill='white'>⏱</text></svg>">
+<style>
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --blue: #1565C0; --breath: #1E88E5; --breath-bg: #EBF5FF;
+  --hold: #E64A19; --hold-bg: #FFF5F0;
+  --gray: #8E9196; --gray2: #5F6368;
+  --bg: #F0F2F5; --card: #FFFFFF;
+  --text: #202124; --divider: #E8EAED;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
+#app{width:100%;height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column;}
+
+/* Header */
+.header{background:linear-gradient(135deg,#0D47A1,#1565C0);padding:calc(14px+var(--safe-top)) 16px 16px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
+.header h1{font-size:18px;font-weight:700;color:#fff;letter-spacing:3px;}
+.hdr-btn{width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;}
+.hdr-btn:active{background:rgba(255,255,255,0.28);}
+.hdr-l{position:absolute;left:10px;}
+.hdr-r{position:absolute;right:10px;display:flex;gap:6px;}
+.hdr-r .hdr-btn{position:static;}
+
+/* Scroll */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 14px;display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch;}
+.scroll::-webkit-scrollbar{width:0;}
+
+/* Card */
+.card{background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+
+/* ── SPIRAL TIMER (always visible) ── */
+.spiral-section{text-align:center;padding:4px 0 2px;}
+.spiral-section .phase-label{font-size:20px;font-weight:800;letter-spacing:6px;margin-bottom:4px;height:28px;}
+.spiral-section .phase-label.br{color:var(--breath);}
+.spiral-section .phase-label.ho{color:var(--hold);}
+.spiral-section .phase-label.idle{color:var(--gray2);}
+.spiral-section .round-label{font-size:13px;color:var(--gray2);font-weight:500;margin-bottom:2px;height:20px;}
+
+.spiral-wrap{position:relative;width:200px;height:200px;margin:0 auto 6px;}
+.spiral-wrap canvas{position:absolute;top:0;left:0;}
+.spiral-wrap .center-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;}
+.spiral-wrap .center-text .time{font-family:'SF Mono','Cascadia Code','Consolas',monospace;font-size:38px;font-weight:800;line-height:1;}
+.spiral-wrap .center-text .time.br{color:var(--breath);}
+.spiral-wrap .center-text .time.ho{color:var(--hold);}
+.spiral-wrap .center-text .time.idle{color:var(--gray2);}
+.spiral-wrap .center-text .time.warn{animation:pulse 0.6s ease-in-out infinite;}
+.spiral-wrap .center-text .sub{font-size:11px;color:var(--gray);margin-top:2px;font-weight:500;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* Progress + info row */
+.spiral-info{display:flex;align-items:center;justify-content:center;gap:20px;font-size:12px;font-weight:500;margin-top:2px;}
+.spiral-info .br{color:var(--breath);}
+.spiral-info .ho{color:var(--hold);}
+.spiral-info .idle{color:var(--gray2);}
+.prog-mini{display:flex;gap:6px;justify-content:center;margin:6px 0 2px;}
+.prog-mini .dot{width:8px;height:8px;border-radius:50%;background:#D5DAE0;transition:all 0.3s;}
+.prog-mini .dot.big{width:12px;height:12px;}
+.prog-mini .dot.done{background:var(--blue);}
+.prog-mini .dot.cur.br{background:var(--breath);}
+.prog-mini .dot.cur.ho{background:var(--hold);}
+
+/* ── TABLE ── */
+.tbl-hdr{display:flex;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--divider);margin-bottom:2px;}
+.tbl-hdr .th-n{width:36px;text-align:center;font-size:10px;font-weight:700;color:var(--gray);letter-spacing:1px;}
+.tbl-hdr .th-b{flex:1;text-align:center;font-size:10px;font-weight:700;color:var(--breath);letter-spacing:1px;}
+.tbl-hdr .th-h{flex:1;text-align:center;font-size:10px;font-weight:700;color:var(--hold);letter-spacing:1px;}
+.rrow{display:flex;align-items:center;height:46px;border-radius:10px;margin:2px 0;transition:background 0.2s;}
+.rrow.active{background:#F5F8FF;}
+.rrow.active .rnum span{background:var(--blue);color:#fff;}
+.rrow .rnum{width:36px;text-align:center;}
+.rrow .rnum span{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#F0F2F5;color:var(--gray2);font-size:12px;font-weight:700;transition:all 0.2s;}
+.rrow .cell{flex:1;margin:0 5px;padding:7px 4px;text-align:center;border-radius:8px;cursor:pointer;transition:all 0.15s;font-family:'SF Mono','Cascadia Code','Consolas',monospace;font-size:15px;font-weight:600;line-height:1.3;}
+.rrow .cell .lbl{display:block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:9px;font-weight:500;opacity:0.55;}
+.rrow .cell.br{background:var(--breath-bg);color:var(--breath);}
+.rrow .cell.ho{background:var(--hold-bg);color:var(--hold);}
+.rrow .cell.sel.br{background:#BBDEFB;box-shadow:inset 0 0 0 2px var(--breath);}
+.rrow .cell.sel.ho{background:#FFCCBC;box-shadow:inset 0 0 0 2px var(--hold);}
+.rrow .cell:active{transform:scale(0.95);}
+.rrow .cell.nonedit{cursor:default;pointer-events:none;}
+.total-row{display:flex;align-items:center;height:38px;border-top:1px solid var(--divider);margin-top:6px;padding-top:10px;}
+.total-row .t-icon{width:36px;text-align:center;font-size:14px;}
+.total-row .t-label{flex:1;font-size:12px;font-weight:600;color:var(--gray2);}
+.total-row .t-val{font-family:'SF Mono','Cascadia Code','Consolas',monospace;font-size:14px;font-weight:700;margin-right:4px;}
+
+/* Banner */
+.done-banner{display:flex;align-items:center;gap:10px;padding:14px;border-radius:12px;background:linear-gradient(135deg,#E8F5E9,#C8E6C9);animation:fadeIn 0.4s ease;}
+.done-banner .icon{font-size:24px;}
+.done-banner .title{font-weight:700;font-size:14px;color:#2E7D32;}
+.done-banner .sub{font-size:11px;color:#558B2F;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+/* History */
+.hist-card{background:#fff;border-radius:14px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,0.04);cursor:pointer;}
+.hist-card .hrow{display:flex;align-items:center;gap:10px;}
+.hist-card .hdate{font-size:14px;font-weight:600;flex:1;}
+.hist-card .hmeta{font-size:11px;color:var(--gray);}
+.hist-card .hbody{display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--divider);}
+.hist-card.open .hbody{display:block;}
+.hist-card .hbody table{width:100%;border-collapse:collapse;}
+.hist-card .hbody th{background:#F5F7FA;padding:7px 6px;font-size:10px;font-weight:700;text-align:center;}
+.hist-card .hbody th:nth-child(1){color:var(--gray);border-radius:6px 0 0 6px;}
+.hist-card .hbody th:nth-child(2){color:var(--breath);}
+.hist-card .hbody th:nth-child(3){color:var(--hold);border-radius:0 6px 6px 0;}
+.hist-card .hbody td{padding:6px;font-size:12px;text-align:center;font-family:'SF Mono','Cascadia Code','Consolas',monospace;}
+.hist-card .hbody td:nth-child(2){color:var(--breath);}
+.hist-card .hbody td:nth-child(3){color:var(--hold);}
+.h-del{background:none;border:none;font-size:15px;cursor:pointer;padding:6px;opacity:0.4;}
+.h-del:active{opacity:0.8;}
+.empty-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--gray);text-align:center;padding:40px 0;}
+.empty-wrap .eicon{font-size:52px;opacity:0.35;}
+
+/* Bottom bar */
+.btm-bar{display:flex;gap:10px;padding:0 14px 16px;padding-bottom:calc(16px+var(--safe-bottom));flex-shrink:0;}
+.btn{flex:1;padding:14px 10px;border-radius:13px;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.12s;letter-spacing:1px;}
+.btn:active{transform:scale(0.96);}
+.btn-ghost{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.08);}
+.btn-fill{color:#fff;}
+.btn-fill.wide{flex:2;}
+.btn-go{background:linear-gradient(135deg,#FF6D00,#FF3D00);color:#fff;box-shadow:0 3px 12px rgba(255,61,0,0.35);}
+
+/* Time picker */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;}
+.dialog{background:#fff;border-radius:22px;padding:24px 20px;width:min(330px,90vw);text-align:center;}
+.dialog h3{font-size:18px;font-weight:700;margin-bottom:18px;}
+.pk-row{display:flex;align-items:center;justify-content:center;gap:6px;}
+.pk-col{display:flex;flex-direction:column;align-items:center;}
+.pk-col .pk-btn{width:44px;height:44px;border:none;background:#F0F2F5;border-radius:50%;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text);transition:background 0.1s;}
+.pk-col .pk-btn:active{background:#DEE1E6;}
+.pk-col .pk-val{font-family:'SF Mono','Cascadia Code','Consolas',monospace;font-size:44px;font-weight:800;padding:5px 0;line-height:1.1;}
+.pk-col .pk-lbl{font-size:11px;color:var(--gray);margin-top:-2px;}
+.pk-colon{font-size:44px;font-weight:800;padding-bottom:24px;color:var(--gray);}
+.pk-presets{display:flex;gap:6px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+.pk-presets button{padding:7px 15px;border-radius:14px;border:1px solid #ddd;background:#FAFBFC;font-size:13px;font-weight:600;cursor:pointer;}
+.pk-presets button:active{background:#E8EDF0;}
+.dlg-btns{display:flex;gap:10px;margin-top:20px;justify-content:center;}
+.dlg-btns button{padding:11px 36px;border-radius:12px;border:none;font-size:15px;font-weight:600;cursor:pointer;}
+.dlg-cancel{background:#F0F2F5;color:var(--text);}
+.dlg-ok{background:var(--blue);color:#fff;}
+
+/* Volume */
+.vol-pop{position:absolute;top:100%;right:8px;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.18);z-index:50;display:flex;align-items:center;gap:10px;min-width:170px;}
+.vol-pop input[type=range]{flex:1;accent-color:var(--blue);}
+.vol-pop .vol-val{font-size:13px;font-weight:700;min-width:36px;text-align:center;color:var(--blue);}
+
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 22px;border-radius:20px;font-size:14px;z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
+.toast.on{opacity:1;}
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="header">
+    <button class="hdr-btn hdr-l hidden" id="backBtn">&#x2190;</button>
+    <h1 id="appTitle">闭气训练</h1>
+    <div class="hdr-r">
+      <button class="hdr-btn" id="volBtn">&#x1F50A;</button>
+      <button class="hdr-btn" id="histBtn">&#x1F4CB;</button>
+    </div>
+    <div class="vol-pop hidden" id="volPopup">
+      <span>&#x1F507;</span>
+      <input type="range" id="volSlider" min="0" max="100" value="80">
+      <span class="vol-val" id="volLabel">80%</span>
+    </div>
+  </div>
+
+  <div class="scroll" id="content"></div>
+
+  <div class="btm-bar" id="btmBar">
+    <button class="btn btn-ghost" id="btn1">&#x21BA; 重置</button>
+    <button class="btn btn-go wide" id="btn2">&#x25B6; 开始训练</button>
+    <button class="btn btn-ghost hidden" id="btn3">&#x23ED; 跳过</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pickerOverlay">
+  <div class="dialog">
+    <h3>设置时间</h3>
+    <div class="pk-row">
+      <div class="pk-col"><button class="pk-btn" id="pkMinUp">+</button><span class="pk-val" id="pkMin">00</span><button class="pk-btn" id="pkMinDn">&minus;</button><span class="pk-lbl">分钟</span></div>
+      <span class="pk-colon">:</span>
+      <div class="pk-col"><button class="pk-btn" id="pkSecUp">+</button><span class="pk-val" id="pkSec">15</span><button class="pk-btn" id="pkSecDn">&minus;</button><span class="pk-lbl">秒</span></div>
+    </div>
+    <div class="pk-presets">
+      <button data-m="0" data-s="15">0:15</button><button data-m="0" data-s="30">0:30</button>
+      <button data-m="0" data-s="45">0:45</button><button data-m="1" data-s="0">1:00</button>
+      <button data-m="2" data-s="0">2:00</button>
+    </div>
+    <div class="dlg-btns"><button class="dlg-cancel" id="pkCancel">取消</button><button class="dlg-ok" id="pkOk">确定</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+var TOTAL = 8;
+var S = {screen:'main',rounds:[],selIdx:-1,selCol:'breath',training:false,roundIdx:0,phase:'breath',remain:0,total:0,paused:false,completed:false,doneRounds:0,timer:null,history:[],volume:80,spiralAngle:0};
+
+for(var i=0;i<TOTAL;i++) S.rounds.push({br:15,ho:30});
+
+// Load persisted data
+try{
+  var rh=localStorage.getItem('bt_hist'); if(rh) S.history=JSON.parse(rh);
+  var rv=localStorage.getItem('bt_vol'); if(rv) S.volume=parseInt(rv)||80;
+  var rr=localStorage.getItem('bt_rounds'); if(rr){var pr=JSON.parse(rr);if(pr.length===TOTAL)S.rounds=pr;}
+}catch(e){}
+
+// ====== AUDIO ======
+var actx=null;
+function ea(){if(actx)return true;try{actx=new(window.AudioContext||window.webkitAudioContext)();return true;}catch(e){return false;}}
+function beep(f,d,t){if(!ea())return;try{if(actx.state==='suspended')actx.resume();var n=actx.currentTime;var g=actx.createGain();g.connect(actx.destination);g.gain.setValueAtTime(S.volume/100*0.35,n);g.gain.exponentialRampToValueAtTime(0.001,n+d);var o=actx.createOscillator();o.type=t||'sine';o.frequency.setValueAtTime(f,n);o.connect(g);o.start(n);o.stop(n+d);}catch(e){}}
+function beepBr(){beep(880,0.2,'sine');setTimeout(function(){beep(1100,0.15,'sine')},250);}
+function beepHo(){beep(660,0.25,'sine');setTimeout(function(){beep(520,0.2,'sine')},300);setTimeout(function(){beep(660,0.2,'sine')},550);}
+function beepDone(){beep(880,0.15,'sine');setTimeout(function(){beep(1100,0.15,'sine')},200);setTimeout(function(){beep(1320,0.3,'sine')},400);}
+function beepCnt(){beep(600,0.08,'square');}
+function setVol(v){S.volume=Math.max(0,Math.min(100,v));document.getElementById('volSlider').value=S.volume;document.getElementById('volLabel').textContent=S.volume+'%';try{localStorage.setItem('bt_vol',String(S.volume));}catch(e){}}
+
+// ====== PERSIST ROUNDS ======
+function saveRounds(){try{localStorage.setItem('bt_rounds',JSON.stringify(S.rounds));}catch(e){}}
+
+// ====== DOM ======
+var $c=document.getElementById('content'),$title=document.getElementById('appTitle'),$histBtn=document.getElementById('histBtn'),$backBtn=document.getElementById('backBtn'),$btn1=document.getElementById('btn1'),$btn2=document.getElementById('btn2'),$btn3=document.getElementById('btn3'),$picker=document.getElementById('pickerOverlay'),$toast=document.getElementById('toast'),$volPopup=document.getElementById('volPopup');
+document.getElementById('volSlider').value=S.volume;document.getElementById('volLabel').textContent=S.volume+'%';
+
+// ====== SPIRAL DRAWING ======
+function drawSpiral(canvasId, progress, color) {
+  var c=document.getElementById(canvasId); if(!c) return;
+  var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;
+  ctx.clearRect(0,0,w,h);
+
+  // Slowly rotate the spiral for a living feel
+  S.spiralAngle = (S.spiralAngle + 0.003) % (Math.PI*2);
+  var rot = S.training ? S.spiralAngle : 0;
+
+  var maxR = 88;
+  var turns = 4.5;
+  var totalAngle = turns * Math.PI * 2;
+  var maxSteps = 360;
+
+  // Draw spiral dots
+  for (var i = 0; i < maxSteps; i++) {
+    var frac = i / maxSteps;
+    if (frac > progress) break;
+
+    var angle = frac * totalAngle + rot;
+    var r = frac * maxR;
+    var x = cx + Math.cos(angle) * r;
+    var y = cy + Math.sin(angle) * r;
+
+    // Fade from center to edge
+    var alpha = 0.15 + frac * 0.7;
+    var dotSize = 2.5 - frac * 0.8;
+
+    // Brighter near progress point
+    if (frac > progress - 0.04) {
+      alpha = 0.9; dotSize = 4;
+    }
+
+    ctx.beginPath();
+    ctx.arc(x, y, dotSize, 0, Math.PI*2);
+    ctx.fillStyle = color.replace(')', ', '+alpha+')').replace('rgb','rgba');
+    if (color.startsWith('#')) {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+    }
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw connecting arc at the tip of the spiral
+  if (progress > 0.01) {
+    var tipAngle = progress * totalAngle + rot;
+    var tipR = progress * maxR;
+    var tx = cx + Math.cos(tipAngle) * tipR;
+    var ty = cy + Math.sin(tipAngle) * tipR;
+
+    // Glow at tip
+    var glow = ctx.createRadialGradient(tx, ty, 0, tx, ty, 10);
+    glow.addColorStop(0, color);
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath();
+    ctx.arc(tx, ty, 10, 0, Math.PI*2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+  }
+}
+
+// ====== RENDER ======
+function render() {
+  if (S.screen === 'history') { rHistory(); return; }
+
+  var h = '';
+
+  // Completion banner
+  if (S.completed) {
+    h += '<div class="done-banner"><span class="icon">&#x2705;</span><div><div class="title">训练完成!</div><div class="sub">已保存至训练记录</div></div></div>';
+    S.completed = false;
+  }
+
+  // ── Spiral timer (ALWAYS visible) ──
+  var phaseCls = 'idle', phaseText = '准备就绪';
+  var timeColor = '#5F6368', spiralColor = '#B0BEC5';
+  var timeStr = '00:00';
+  var subText = '点击开始';
+  var prog = 1.0;
+  var isTraining = S.training;
+  var totalSec = S.rounds.reduce(function(s,r){return s+r.br+r.ho;},0);
+
+  if (isTraining) {
+    phaseCls = S.phase;
+    phaseText = S.phase === 'breath' ? '呼 吸' : '闭 气';
+    timeColor = S.phase === 'breath' ? '#1E88E5' : '#E64A19';
+    spiralColor = S.phase === 'breath' ? '#42A5F5' : '#FF7043';
+    timeStr = fmtMs(S.remain);
+    subText = S.paused ? '已暂停' : '剩余时间';
+    prog = S.total > 0 ? S.remain / S.total : 0;
+  } else {
+    timeStr = fmt(totalSec);
+    subText = '总时长';
+  }
+
+  h += '<div class="spiral-section">';
+  h += '<div class="round-label" id="spRound">' + (isTraining ? '第 '+(S.roundIdx+1)+' / '+TOTAL+' 轮' : '') + '</div>';
+  h += '<div class="phase-label '+phaseCls+'" id="spPhase" style="color:'+timeColor+'">'+phaseText+'</div>';
+
+  h += '<div class="spiral-wrap"><canvas id="spCanvas" width="200" height="200"></canvas>';
+  h += '<div class="center-text"><div class="time '+phaseCls+(isTraining&&S.remain<5000&&!S.paused?' warn':'')+'" id="spTime" style="color:'+timeColor+'">'+timeStr+'</div>';
+  h += '<div class="sub" id="spSub">'+subText+'</div></div></div>';
+
+  // Progress dots
+  h += '<div class="prog-mini" id="spDots">';
+  for (var i=0;i<TOTAL;i++) {
+    var cls='dot';
+    if(isTraining){if(i<S.doneRounds)cls+=' done';else if(i===S.roundIdx)cls+=' big cur '+S.phase;}
+    h += '<span class="'+cls+'"></span>';
+  }
+  h += '</div>';
+
+  // Info
+  h += '<div class="spiral-info" id="spInfo">';
+  if (isTraining) {
+    h += '<span class="br">呼吸 '+fmt((S.rounds[S.roundIdx]||{}).br||0)+'</span><span class="ho">闭气 '+fmt((S.rounds[S.roundIdx]||{}).ho||0)+'</span>';
+  } else {
+    h += '<span class="idle">共 '+TOTAL+' 轮训练</span>';
+  }
+  h += '</div>';
+  h += '</div>';
+
+  // ── Round table ──
+  h += '<div class="card"><div class="tbl-hdr">';
+  h += '<span class="th-n">#</span><span class="th-b">呼吸时间</span><span class="th-h">闭气时间</span></div>';
+
+  for (var i=0;i<TOTAL;i++) {
+    var r=S.rounds[i];
+    var isActive=isTraining&&i===S.roundIdx;
+    var bs=(!isTraining&&S.selIdx===i&&S.selCol==='breath')?' sel':'';
+    var hs=(!isTraining&&S.selIdx===i&&S.selCol==='hold')?' sel':'';
+    var ned=isTraining?' nonedit':'';
+    h += '<div class="rrow'+(isActive?' active':'')+'">';
+    h += '<div class="rnum"><span>'+(i+1)+'</span></div>';
+    h += '<div class="cell br'+bs+ned+'" data-r="'+i+'" data-c="breath">'+fmt(r.br)+'<span class="lbl">吸气</span></div>';
+    h += '<div class="cell ho'+hs+ned+'" data-r="'+i+'" data-c="hold">'+fmt(r.ho)+'<span class="lbl">屏息</span></div>';
+    h += '</div>';
+  }
+
+  h += '<div class="total-row"><span class="t-icon">&#x23F1;</span><span class="t-label">训练总时长</span><span class="t-val">'+fmt(totalSec)+'</span></div></div>';
+
+  $c.innerHTML = h;
+  $c.style.background = isTraining ? (S.phase==='breath'?'#EBF5FF':'#FFF5F0') : '';
+
+  // Bind cell clicks (only when NOT training)
+  if (!isTraining) {
+    $c.querySelectorAll('.cell:not(.nonedit)').forEach(function(cell){
+      cell.addEventListener('click',function(){
+        S.selIdx=parseInt(cell.dataset.r);S.selCol=cell.dataset.c;openPicker();
+      });
+    });
+  }
+
+  // Draw spiral
+  setTimeout(function(){ drawSpiral('spCanvas', prog, spiralColor); }, 30);
+
+  // Buttons
+  updateButtons();
+}
+
+function updateButtons() {
+  if (S.training) {
+    $btn1.className='btn btn-ghost'; $btn1.innerHTML='&#x21BA; 重置'; $btn1.onclick=resetTraining;
+    $btn2.className='btn btn-fill'; $btn2.style.background=S.phase==='breath'?'#1E88E5':'#E64A19';
+    $btn2.innerHTML=S.paused?'&#x25B6; 继续':'&#x23F8; 暂停';
+    $btn2.onclick=function(){S.paused?resumeTraining():pauseTraining();};
+    $btn3.classList.remove('hidden'); $btn3.className='btn btn-ghost'; $btn3.innerHTML='&#x23ED; 跳过'; $btn3.onclick=skipRound;
+  } else {
+    $btn1.className='btn btn-ghost'; $btn1.innerHTML='&#x21BA; 重置'; $btn1.onclick=function(){
+      S.rounds=[];for(var i=0;i<TOTAL;i++)S.rounds.push({br:15,ho:30});S.selIdx=-1;S.completed=false;saveRounds();render();toast('已重置所有时间');};
+    $btn2.className='btn btn-go wide';$btn2.style.background='';$btn2.innerHTML='&#x25B6; 开始训练';$btn2.onclick=startTraining;
+    $btn3.classList.add('hidden');
+  }
+}
+
+function rHistory() {
+  S.screen='history';$title.textContent='历史记录';$histBtn.classList.add('hidden');$backBtn.classList.remove('hidden');
+  $btn1.classList.add('hidden');$btn2.classList.add('hidden');$btn3.classList.add('hidden');
+  var h='';
+  if(S.history.length===0){
+    h='<div class="empty-wrap"><span class="eicon">&#x23F1;</span><div style="font-size:18px;font-weight:600;">暂无训练记录</div><div style="font-size:14px;">完成完整的闭气训练后将显示记录</div></div>';
+  }else{
+    h='<div style="font-size:12px;color:#8E9196;padding-bottom:6px">共 '+S.history.length+' 条记录（保留三年）</div>';
+    S.history.forEach(function(rec,idx){
+      var d=new Date(rec.st);
+      var ds=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+      var dur=rec.dur>=60?Math.floor(rec.dur/60)+'分'+(rec.dur%60)+'秒':rec.dur+'秒';
+      h+='<div class="hist-card" data-i="'+idx+'"><div class="hrow">';
+      h+='<span style="color:#34A853;font-size:16px;">&#x2705;</span><span class="hdate">'+ds+'</span><span class="hmeta">'+rec.done+'/'+TOTAL+' 轮 · '+dur+'</span>';
+      h+='<button class="h-del" data-i="'+idx+'">&#x1F5D1;</button></div>';
+      h+='<div class="hbody"><table><tr><th>#</th><th>呼吸</th><th>闭气</th></tr>';
+      rec.rs.forEach(function(r,i){h+='<tr><td style="color:#8E9196">'+(i+1)+'</td><td>'+fmt(r.br)+'</td><td>'+fmt(r.ho)+'</td></tr>';});
+      h+='</table></div></div>';
+    });
+  }
+  $c.innerHTML=h;$c.style.background='';
+  $c.querySelectorAll('.hist-card').forEach(function(card){card.addEventListener('click',function(e){if(e.target.classList.contains('h-del'))return;card.classList.toggle('open');});});
+  $c.querySelectorAll('.h-del').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();if(confirm('确定删除该记录？')){S.history.splice(parseInt(btn.dataset.i),1);saveHist();rHistory();}});});
+}
+
+// ====== PICKER ======
+function openPicker(){
+  var r=S.rounds[S.selIdx];var sec=S.selCol==='breath'?r.br:r.ho;
+  document.getElementById('pkMin').textContent=pad(Math.floor(sec/60));
+  document.getElementById('pkSec').textContent=pad(sec%60);$picker.classList.remove('hidden');
+}
+function closePicker(){$picker.classList.add('hidden');}
+function pkV(){return{m:parseInt(document.getElementById('pkMin').textContent)||0,s:parseInt(document.getElementById('pkSec').textContent)||0};}
+document.getElementById('pkMinUp').addEventListener('click',function(){var v=pkV();document.getElementById('pkMin').textContent=pad(Math.min(v.m+1,99));});
+document.getElementById('pkMinDn').addEventListener('click',function(){var v=pkV();document.getElementById('pkMin').textContent=pad(Math.max(v.m-1,0));});
+document.getElementById('pkSecUp').addEventListener('click',function(){var v=pkV();document.getElementById('pkSec').textContent=pad(v.s+5>59?59:v.s+5);});
+document.getElementById('pkSecDn').addEventListener('click',function(){var v=pkV();document.getElementById('pkSec').textContent=pad(v.s-5<0?0:v.s-5);});
+document.getElementById('pkCancel').addEventListener('click',closePicker);
+document.getElementById('pkOk').addEventListener('click',function(){
+  var v=pkV();var t=v.m*60+v.s;
+  if(S.selIdx>=0){var r=S.rounds[S.selIdx];if(S.selCol==='breath')r.br=Math.max(0,Math.min(5999,t));else r.ho=Math.max(0,Math.min(5999,t));}
+  saveRounds();closePicker();render();
+});
+document.querySelectorAll('.pk-presets button').forEach(function(b){b.addEventListener('click',function(){document.getElementById('pkMin').textContent=pad(b.dataset.m);document.getElementById('pkSec').textContent=pad(b.dataset.s);});});
+$picker.addEventListener('click',function(e){if(e.target===$picker)closePicker();});
+
+// ====== TRAINING ======
+function startTraining(){if(S.training&&!S.paused)return;ea();if(!S.training){S.training=true;S.roundIdx=0;S.phase='breath';S.paused=false;S.completed=false;S.doneRounds=0;S.remain=S.rounds[0].br*1000;S.total=S.rounds[0].br*1000;beepBr();}else{S.paused=false;}startTimer();render();}
+function pauseTraining(){S.paused=true;stopTimer();render();}
+function resumeTraining(){S.paused=false;startTimer();render();}
+function skipRound(){stopTimer();if(S.phase==='breath'){S.phase='hold';var r=S.rounds[S.roundIdx];S.remain=r.ho*1000;S.total=r.ho*1000;lastB=-1;beepHo();}else{advanceRound();if(S.training)beepBr();}if(S.training)startTimer();render();}
+function resetTraining(){stopTimer();S.training=false;S.roundIdx=0;S.phase='breath';S.remain=0;S.total=0;S.paused=false;S.completed=false;S.doneRounds=0;$c.style.background='';render();}
+
+// Lightweight timer tick — updates DOM in-place without full re-render (no flicker)
+function tick() {
+  var isTrain = S.training;
+  if (!isTrain) return;
+
+  var pc = S.phase==='breath'?'#1E88E5':'#E64A19';
+  var sc = S.phase==='breath'?'#42A5F5':'#FF7043';
+  var ts = fmtMs(S.remain);
+  var prog = S.total>0 ? S.remain/S.total : 0;
+  var warnCls = (S.remain<5000&&!S.paused)?' warn':'';
+
+  // Update phase label
+  var ph = document.getElementById('spPhase');
+  if (ph) { ph.textContent = S.phase==='breath'?'呼 吸':'闭 气'; ph.style.color = pc; ph.className = 'phase-label '+S.phase; }
+
+  // Update round label
+  var rl = document.getElementById('spRound');
+  if (rl) rl.textContent = '第 '+(S.roundIdx+1)+' / '+TOTAL+' 轮';
+
+  // Update center time
+  var tm = document.getElementById('spTime');
+  if (tm) { tm.textContent = ts; tm.style.color = pc; tm.className = 'time '+S.phase+warnCls; }
+
+  // Update sub label
+  var sb = document.getElementById('spSub');
+  if (sb) sb.textContent = S.paused?'已暂停':'剩余时间';
+
+  // Redraw spiral canvas
+  drawSpiral('spCanvas', prog, sc);
+
+  // Update progress dots
+  var pd = document.getElementById('spDots');
+  if (pd) {
+    var dh = '';
+    for (var i=0;i<TOTAL;i++) {
+      var cls='dot';
+      if (i<S.doneRounds) cls+=' done';
+      else if (i===S.roundIdx) cls+=' big cur '+S.phase;
+      dh += '<span class="'+cls+'"></span>';
+    }
+    pd.innerHTML = dh;
+  }
+
+  // Update info
+  var inf = document.getElementById('spInfo');
+  if (inf) inf.innerHTML = '<span class="br">呼吸 '+fmt((S.rounds[S.roundIdx]||{}).br||0)+'</span><span class="ho">闭气 '+fmt((S.rounds[S.roundIdx]||{}).ho||0)+'</span>';
+
+  // Update pause button
+  if ($btn2) { $btn2.style.background = S.paused ? '#34A853' : pc; $btn2.innerHTML = S.paused ? '&#x25B6; 继续' : '&#x23F8; 暂停'; }
+
+  // Background
+  $c.style.background = S.phase==='breath'?'#EBF5FF':'#FFF5F0';
+}
+
+var lastB=-1;
+function startTimer(){stopTimer();lastB=-1;S.timer=setInterval(function(){if(S.paused)return;S.remain-=50;if(S.remain<=0){if(S.phase==='breath'){S.phase='hold';var r=S.rounds[S.roundIdx];S.remain=r.ho*1000;S.total=r.ho*1000;lastB=-1;beepHo();}else{advanceRound();if(S.training)beepBr();}}else{var sec=Math.ceil(S.remain/1000);if(sec<=3&&sec>0&&sec!==lastB){lastB=sec;beepCnt();}}tick();},50);}
+function stopTimer(){if(S.timer){clearInterval(S.timer);S.timer=null;}}
+function advanceRound(){S.doneRounds++;var next=S.roundIdx+1;if(next>=TOTAL){stopTimer();S.training=false;S.completed=true;S.doneRounds=TOTAL;S.phase='breath';$c.style.background='';beepDone();saveRecord();render();toast('训练完成！已保存至训练记录');}else{S.roundIdx=next;S.phase='breath';var r=S.rounds[next];S.remain=r.br*1000;S.total=r.br*1000;lastB=-1;}}
+
+// ====== HISTORY ======
+function saveRecord(){var td=S.rounds.reduce(function(s,r){return s+r.br+r.ho;},0);S.history.unshift({st:Date.now()-td*1000,et:Date.now(),done:TOTAL,dur:td,rs:S.rounds.map(function(r){return{br:r.br,ho:r.ho};})});S.history=S.history.filter(function(r){return r.st>Date.now()-3*365*24*3600*1000;});saveHist();}
+function saveHist(){try{localStorage.setItem('bt_hist',JSON.stringify(S.history));}catch(e){}}
+function toast(msg){$toast.textContent=msg;$toast.classList.add('on');setTimeout(function(){$toast.classList.remove('on')},2000);}
+
+// ====== NAV ======
+document.getElementById('histBtn').addEventListener('click',function(){S.screen='history';stopTimer();S.training=false;S.paused=false;$c.style.background='';render();});
+document.getElementById('backBtn').addEventListener('click',function(){S.screen='main';$title.textContent='闭气训练';$histBtn.classList.remove('hidden');$backBtn.classList.add('hidden');render();});
+document.getElementById('volBtn').addEventListener('click',function(e){e.stopPropagation();$volPopup.classList.toggle('hidden');});
+document.addEventListener('click',function(e){if(!$volPopup.classList.contains('hidden')&&!$volPopup.contains(e.target)&&e.target.id!=='volBtn')$volPopup.classList.add('hidden');});
+document.getElementById('volSlider').addEventListener('input',function(){setVol(parseInt(this.value));});
+
+// ====== UTIL ======
+function fmt(sec){return pad(Math.floor(sec/60))+':'+pad(sec%60);}
+function fmtMs(ms){return fmt(Math.max(0,Math.floor(ms/1000)));}
+function pad(n){return String(n).padStart(2,'0');}
+
+// SW disabled to prevent caching during development
+// if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+
+setVol(S.volume);render();
+})();
+</script>
+</body>
+</html>
