@@ -89,6 +89,11 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .rrow .cell.sel.ho{background:#FFCCBC;box-shadow:inset 0 0 0 2px var(--hold);}
 .rrow .cell:active{transform:scale(0.95);}
 .rrow .cell.nonedit{cursor:default;pointer-events:none;}
+/* Active training cell — glowing pulse */
+.rrow .cell.live.br{background:#90CAF9;box-shadow:0 0 0 3px #1E88E5, 0 0 16px rgba(30,136,229,0.30);}
+.rrow .cell.live.ho{background:#FFAB91;box-shadow:0 0 0 3px #E64A19, 0 0 16px rgba(230,74,25,0.30);}
+.rrow .cell.live{animation:cellBreathe 1.5s ease-in-out infinite;}
+@keyframes cellBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 .total-row{display:flex;align-items:center;height:38px;border-top:1px solid var(--divider);margin-top:6px;padding-top:10px;}
 .total-row .t-icon{width:36px;text-align:center;font-size:14px;}
 .total-row .t-label{flex:1;font-size:12px;font-weight:600;color:var(--gray2);}
@@ -369,10 +374,12 @@ function render() {
     var bs=(!isTraining&&S.selIdx===i&&S.selCol==='breath')?' sel':'';
     var hs=(!isTraining&&S.selIdx===i&&S.selCol==='hold')?' sel':'';
     var ned=isTraining?' nonedit':'';
+    var liveBr = (isActive && S.phase==='breath') ? ' live' : '';
+    var liveHo = (isActive && S.phase==='hold') ? ' live' : '';
     h += '<div class="rrow'+(isActive?' active':'')+'">';
     h += '<div class="rnum"><span>'+(i+1)+'</span></div>';
-    h += '<div class="cell br'+bs+ned+'" data-r="'+i+'" data-c="breath">'+fmt(r.br)+'<span class="lbl">吸气</span></div>';
-    h += '<div class="cell ho'+hs+ned+'" data-r="'+i+'" data-c="hold">'+fmt(r.ho)+'<span class="lbl">屏息</span></div>';
+    h += '<div class="cell br'+bs+ned+liveBr+'" id="cellB'+i+'" data-r="'+i+'" data-c="breath">'+fmt(r.br)+'<span class="lbl">吸气</span></div>';
+    h += '<div class="cell ho'+hs+ned+liveHo+'" id="cellH'+i+'" data-r="'+i+'" data-c="hold">'+fmt(r.ho)+'<span class="lbl">屏息</span></div>';
     h += '</div>';
   }
 
@@ -459,7 +466,7 @@ document.querySelectorAll('.pk-presets button').forEach(function(b){b.addEventLi
 $picker.addEventListener('click',function(e){if(e.target===$picker)closePicker();});
 
 // ====== TRAINING ======
-function startTraining(){if(S.training&&!S.paused)return;ea();if(!S.training){S.training=true;S.roundIdx=0;S.phase='breath';S.paused=false;S.completed=false;S.doneRounds=0;S.remain=S.rounds[0].br*1000;S.total=S.rounds[0].br*1000;beepBr();}else{S.paused=false;}startTimer();render();}
+function startTraining(){if(S.training&&!S.paused)return;ea();if(!S.training){S.training=true;S.roundIdx=0;S.phase='breath';S.paused=false;S.completed=false;S.doneRounds=0;S.prevLive=null;S.remain=S.rounds[0].br*1000;S.total=S.rounds[0].br*1000;beepBr();}else{S.paused=false;}startTimer();render();}
 function pauseTraining(){S.paused=true;stopTimer();render();}
 function resumeTraining(){S.paused=false;startTimer();render();}
 function skipRound(){stopTimer();if(S.phase==='breath'){S.phase='hold';var r=S.rounds[S.roundIdx];S.remain=r.ho*1000;S.total=r.ho*1000;lastB=-1;beepHo();}else{advanceRound();if(S.training)beepBr();}if(S.training)startTimer();render();}
@@ -511,6 +518,34 @@ function tick() {
   // Update info
   var inf = document.getElementById('spInfo');
   if (inf) inf.innerHTML = '<span class="br">呼吸 '+fmt((S.rounds[S.roundIdx]||{}).br||0)+'</span><span class="ho">闭气 '+fmt((S.rounds[S.roundIdx]||{}).ho||0)+'</span>';
+
+  // Update live cell highlight (when phase or round changes)
+  var curLive = S.roundIdx + '_' + S.phase;
+  if (S.prevLive !== curLive) {
+    if (S.prevLive) {
+      var parts = S.prevLive.split('_');
+      var oldCell = document.getElementById('cell' + (parts[1]==='breath'?'B':'H') + parts[0]);
+      if (oldCell) oldCell.classList.remove('live');
+      // Also remove active from old row if round changed
+      if (parseInt(parts[0]) !== S.roundIdx) {
+        var oldRows = document.querySelectorAll('.rrow.active');
+        oldRows.forEach(function(rw){ rw.classList.remove('active');
+          var span = rw.querySelector('.rnum span'); if (span) { span.style.background = ''; span.style.color = ''; }
+        });
+      }
+    }
+    // Add live to new cell
+    var newCell = document.getElementById('cell' + (S.phase==='breath'?'B':'H') + S.roundIdx);
+    if (newCell) newCell.classList.add('live');
+    // Ensure current row is active
+    var rows = document.querySelectorAll('.rrow');
+    rows.forEach(function(rw, i){
+      if (i === S.roundIdx) { rw.classList.add('active');
+        var span = rw.querySelector('.rnum span'); if (span) { span.style.background = '#1565C0'; span.style.color = '#fff'; }
+      }
+    });
+    S.prevLive = curLive;
+  }
 
   // Update pause button
   if ($btn2) { $btn2.style.background = S.paused ? '#34A853' : pc; $btn2.innerHTML = S.paused ? '&#x25B6; 继续' : '&#x23F8; 暂停'; }
