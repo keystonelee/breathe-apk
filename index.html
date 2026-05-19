@@ -406,13 +406,14 @@ function render() {
 
 function updateButtons() {
   if (S.training) {
-    $btn1.className='btn btn-ghost'; $btn1.innerHTML='&#x21BA; 重置'; $btn1.onclick=resetTraining;
+    $btn1.className='btn btn-ghost'; $btn1.innerHTML='&#x21BA; 重置'; $btn1.onclick=function(){if(confirm('确定要停止当前训练并重置吗？'))resetTraining();};
     $btn2.className='btn btn-fill'; $btn2.style.background=S.phase==='breath'?'#1E88E5':'#E64A19';
     $btn2.innerHTML=S.paused?'&#x25B6; 继续':'&#x23F8; 暂停';
     $btn2.onclick=function(){S.paused?resumeTraining():pauseTraining();};
     $btn3.classList.remove('hidden'); $btn3.className='btn btn-ghost'; $btn3.innerHTML='&#x23ED; 跳过'; $btn3.onclick=skipRound;
   } else {
     $btn1.className='btn btn-ghost'; $btn1.innerHTML='&#x21BA; 重置'; $btn1.onclick=function(){
+      if(!confirm('确定要恢复默认时间设置吗？\n所有调整将被清除。'))return;
       S.rounds=[];for(var i=0;i<TOTAL;i++)S.rounds.push({br:15,ho:30});S.selIdx=-1;S.completed=false;saveRounds();render();toast('已重置所有时间');};
     $btn2.className='btn btn-go wide';$btn2.style.background='';$btn2.innerHTML='&#x25B6; 开始训练';$btn2.onclick=startTraining;
     $btn3.classList.add('hidden');
